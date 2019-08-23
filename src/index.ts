@@ -75,7 +75,7 @@ function GenerateUrlType<TReturns, TSchema extends UrlType<TReturns>>(
         continue;
       }
 
-      url += "&" + k + "=" + p;
+      url += "?" + k + "=" + p;
     }
 
     if (url.indexOf(":") > -1) {
