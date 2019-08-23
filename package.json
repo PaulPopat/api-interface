@@ -1,7 +1,18 @@
 {
-  "name": "api-interface-generator",
+  "name": "@paulpopat/api-interface",
   "version": "1.0.0",
   "main": "lib/index.js",
+  "description": "A tool for generating simple interfaces for calling APIs accross projects",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/PaulPopat/api-interface.git"
+  },
+  "author": "Paul Popat",
+  "license": "GPL-3.0-or-later",
+  "bugs": {
+    "url": "https://github.com/PaulPopat/api-interface/issues"
+  },
+  "homepage": "https://github.com/PaulPopat/api-interface#readme",
   "scripts": {
     "build": "npm run build:types && npm run build:js",
     "build:types": "tsc --emitDeclarationOnly",
