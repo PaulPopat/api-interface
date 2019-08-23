@@ -50,7 +50,7 @@ type UrlFunction<TReturns, TSchema extends UrlType<TReturns>> = (
 function GenerateUrlType<TReturns, TSchema extends UrlType<TReturns>>(
   schema: TSchema,
   metadata: Metadata,
-  headers: { [key: string]: string }
+  headers: () => { [key: string]: string }
 ) {
   return async (
     parameters: {
@@ -86,7 +86,7 @@ function GenerateUrlType<TReturns, TSchema extends UrlType<TReturns>>(
       method: schema.method,
       url: url,
       baseURL: metadata.base,
-      headers
+      headers: headers()
     });
     if (!schema.returns(result)) {
       throw new Error(
@@ -113,7 +113,11 @@ function GenerateBodyType<
   TBody,
   TReturns,
   TSchema extends BodyType<TBody, TReturns>
->(schema: TSchema, metadata: Metadata, headers: { [key: string]: string }) {
+>(
+  schema: TSchema,
+  metadata: Metadata,
+  headers: () => { [key: string]: string }
+) {
   return async (
     parameters: {
       [key in keyof TSchema["parameters"]]: IsType<TSchema["parameters"][key]>
@@ -144,7 +148,7 @@ function GenerateBodyType<
       url: url,
       data: body,
       baseURL: metadata.base,
-      headers
+      headers: headers()
     });
     if (!schema.returns(result)) {
       throw new Error(
@@ -164,14 +168,14 @@ type PlainUrlFunction<
 function GeneratePlainUrlType<TReturns, TSchema extends PlainUrlType<TReturns>>(
   schema: TSchema,
   metadata: Metadata,
-  headers: { [key: string]: string }
+  headers: () => { [key: string]: string }
 ) {
   return async () => {
     const { data: result } = await axios.request({
       method: schema.method,
       url: schema.url,
       baseURL: metadata.base,
-      headers
+      headers: headers()
     });
     if (!schema.returns(result)) {
       throw new Error(
@@ -193,14 +197,18 @@ function GeneratePlainBodyType<
   TBody,
   TReturns,
   TSchema extends PlainBodyType<TBody, TReturns>
->(schema: TSchema, metadata: Metadata, headers: { [key: string]: string }) {
+>(
+  schema: TSchema,
+  metadata: Metadata,
+  headers: () => { [key: string]: string }
+) {
   return async (body: IsType<TSchema["body"]>) => {
     const { data: result } = await axios.request({
       method: schema.method,
       url: schema.url,
       baseURL: metadata.base,
       data: body,
-      headers
+      headers: headers()
     });
     if (!schema.returns(result)) {
       throw new Error(
@@ -282,13 +290,13 @@ export function GenerateInterface<TSchema extends Apis>(
 
     const api = schema[key];
     if (IsPlainBody(api)) {
-      result[key] = GeneratePlainBodyType(api, metadata, headers);
+      result[key] = GeneratePlainBodyType(api, metadata, () => headers);
     } else if (IsPlainUrl(api)) {
-      result[key] = GeneratePlainUrlType(api, metadata, headers);
+      result[key] = GeneratePlainUrlType(api, metadata, () => headers);
     } else if (IsBody(api)) {
-      result[key] = GenerateBodyType(api, metadata, headers);
+      result[key] = GenerateBodyType(api, metadata, () => headers);
     } else if (IsUrl(api)) {
-      result[key] = GenerateUrlType(api, metadata, headers);
+      result[key] = GenerateUrlType(api, metadata, () => headers);
     }
   }
 
