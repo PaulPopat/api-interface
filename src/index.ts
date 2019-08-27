@@ -1,5 +1,5 @@
 import axios from "axios";
-import { Checker, IsType, IsString } from "@paulpopat/safe-type";
+import { Checker, IsType } from "@paulpopat/safe-type";
 
 type Metadata = {
   base: string;
