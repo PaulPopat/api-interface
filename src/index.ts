@@ -1,5 +1,5 @@
 import axios from "axios";
-import { Checker, IsType } from "@paulpopat/safe-type";
+import { Checker, IsType, IsString } from "@paulpopat/safe-type";
 
 type Metadata = {
   base: string;
@@ -38,12 +38,13 @@ type Apis = {
     | BodyType<any, any>
     | UrlType<any>
     | PlainUrlType<any>
-    | PlainBodyType<any, any>;
+    | PlainBodyType<any, any>
+    | Apis;
 };
 
 type UrlFunction<TReturns, TSchema extends UrlType<TReturns>> = (
   parameters: {
-    [key in keyof TSchema["parameters"]]: IsType<TSchema["parameters"][key]>
+    [key in keyof TSchema["parameters"]]: IsType<TSchema["parameters"][key]>;
   }
 ) => Promise<IsType<TSchema["returns"]>>;
 
@@ -54,7 +55,7 @@ function GenerateUrlType<TReturns, TSchema extends UrlType<TReturns>>(
 ) {
   return async (
     parameters: {
-      [key in keyof TSchema["parameters"]]: IsType<TSchema["parameters"][key]>
+      [key in keyof TSchema["parameters"]]: IsType<TSchema["parameters"][key]>;
     }
   ) => {
     let url = schema.url;
@@ -104,7 +105,7 @@ type BodyFunction<
   TSchema extends BodyType<TBody, TReturns>
 > = (
   parameters: {
-    [key in keyof TSchema["parameters"]]: IsType<TSchema["parameters"][key]>
+    [key in keyof TSchema["parameters"]]: IsType<TSchema["parameters"][key]>;
   },
   body: IsType<TSchema["body"]>
 ) => Promise<IsType<TSchema["returns"]>>;
@@ -120,7 +121,7 @@ function GenerateBodyType<
 ) {
   return async (
     parameters: {
-      [key in keyof TSchema["parameters"]]: IsType<TSchema["parameters"][key]>
+      [key in keyof TSchema["parameters"]]: IsType<TSchema["parameters"][key]>;
     },
     body: IsType<TSchema["body"]>
   ) => {
@@ -233,7 +234,9 @@ type ApiInterface<TSchema extends Apis> = {
         TSchema[key]["returns"],
         TSchema[key]
       >
-    : unknown
+    : TSchema[key] extends Apis
+    ? ApiInterface<TSchema[key]>
+    : unknown;
 };
 
 export function IsBody<TBody = {}, TReturns = {}>(
@@ -242,6 +245,7 @@ export function IsBody<TBody = {}, TReturns = {}>(
     | UrlType<TReturns>
     | PlainUrlType<TReturns>
     | PlainBodyType<TBody, TReturns>
+    | Apis
 ): schema is BodyType<TBody, TReturns> {
   return schema.hasOwnProperty("body") && schema.hasOwnProperty("parameters");
 }
@@ -252,6 +256,7 @@ export function IsUrl<TBody = {}, TReturns = {}>(
     | UrlType<TReturns>
     | PlainUrlType<TReturns>
     | PlainBodyType<TBody, TReturns>
+    | Apis
 ): schema is UrlType<TReturns> {
   return !schema.hasOwnProperty("body") && schema.hasOwnProperty("parameters");
 }
@@ -262,6 +267,7 @@ export function IsPlainUrl<TBody = {}, TReturns = {}>(
     | UrlType<TReturns>
     | PlainUrlType<TReturns>
     | PlainBodyType<TBody, TReturns>
+    | Apis
 ): schema is PlainUrlType<TReturns> {
   return !schema.hasOwnProperty("parameters") && !schema.hasOwnProperty("body");
 }
@@ -272,8 +278,25 @@ export function IsPlainBody<TBody = {}, TReturns = {}>(
     | UrlType<TReturns>
     | PlainUrlType<TReturns>
     | PlainBodyType<TBody, TReturns>
+    | Apis
 ): schema is PlainBodyType<TBody, TReturns> {
   return !schema.hasOwnProperty("parameters") && schema.hasOwnProperty("body");
+}
+
+export function IsApis<TBody = {}, TReturns = {}>(
+  schema:
+    | BodyType<TBody, TReturns>
+    | UrlType<TReturns>
+    | PlainUrlType<TReturns>
+    | PlainBodyType<TBody, TReturns>
+    | Apis
+): schema is Apis {
+  return (
+    !IsBody(schema) &&
+    !IsUrl(schema) &&
+    !IsPlainUrl(schema) &&
+    !IsPlainBody(schema)
+  );
 }
 
 export function GenerateInterface<TSchema extends Apis>(
@@ -297,6 +320,8 @@ export function GenerateInterface<TSchema extends Apis>(
       result[key] = GenerateBodyType(api, metadata, () => headers);
     } else if (IsUrl(api)) {
       result[key] = GenerateUrlType(api, metadata, () => headers);
+    } else if (IsApis(api)) {
+      result[key] = GenerateInterface(api, metadata);
     }
   }
 
