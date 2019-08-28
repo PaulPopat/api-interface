@@ -3,6 +3,7 @@ import { Checker, IsType } from "@paulpopat/safe-type";
 
 type Metadata = {
   base: string;
+  headers?: { [key: string]: string };
 };
 
 type BodyType<TBody, TReturns> = {
@@ -239,7 +240,7 @@ type ApiInterface<TSchema extends Apis> = {
     : unknown;
 };
 
-export function IsBody<TBody = {}, TReturns = {}>(
+function IsBody<TBody = {}, TReturns = {}>(
   schema:
     | BodyType<TBody, TReturns>
     | UrlType<TReturns>
@@ -250,7 +251,7 @@ export function IsBody<TBody = {}, TReturns = {}>(
   return schema.hasOwnProperty("body") && schema.hasOwnProperty("parameters");
 }
 
-export function IsUrl<TBody = {}, TReturns = {}>(
+function IsUrl<TBody = {}, TReturns = {}>(
   schema:
     | BodyType<TBody, TReturns>
     | UrlType<TReturns>
@@ -261,7 +262,7 @@ export function IsUrl<TBody = {}, TReturns = {}>(
   return !schema.hasOwnProperty("body") && schema.hasOwnProperty("parameters");
 }
 
-export function IsPlainUrl<TBody = {}, TReturns = {}>(
+function IsPlainUrl<TBody = {}, TReturns = {}>(
   schema:
     | BodyType<TBody, TReturns>
     | UrlType<TReturns>
@@ -272,7 +273,7 @@ export function IsPlainUrl<TBody = {}, TReturns = {}>(
   return !schema.hasOwnProperty("parameters") && !schema.hasOwnProperty("body");
 }
 
-export function IsPlainBody<TBody = {}, TReturns = {}>(
+function IsPlainBody<TBody = {}, TReturns = {}>(
   schema:
     | BodyType<TBody, TReturns>
     | UrlType<TReturns>
@@ -283,7 +284,7 @@ export function IsPlainBody<TBody = {}, TReturns = {}>(
   return !schema.hasOwnProperty("parameters") && schema.hasOwnProperty("body");
 }
 
-export function IsApis<TBody = {}, TReturns = {}>(
+function IsApis<TBody = {}, TReturns = {}>(
   schema:
     | BodyType<TBody, TReturns>
     | UrlType<TReturns>
@@ -299,9 +300,10 @@ export function IsApis<TBody = {}, TReturns = {}>(
   );
 }
 
-export function GenerateInterface<TSchema extends Apis>(
+function GenerateInterface<TSchema extends Apis>(
   schema: TSchema,
-  metadata: Metadata
+  metadata: Metadata,
+  default_headers: { [key: string]: string }
 ): ApiInterface<TSchema> & { headers: { [key: string]: string } } {
   const result: ApiInterface<any> = {};
   let headers: { [key: string]: string } = {};
@@ -313,15 +315,27 @@ export function GenerateInterface<TSchema extends Apis>(
 
     const api = schema[key];
     if (IsPlainBody(api)) {
-      result[key] = GeneratePlainBodyType(api, metadata, () => headers);
+      result[key] = GeneratePlainBodyType(api, metadata, () => ({
+        ...default_headers,
+        ...headers
+      }));
     } else if (IsPlainUrl(api)) {
-      result[key] = GeneratePlainUrlType(api, metadata, () => headers);
+      result[key] = GeneratePlainUrlType(api, metadata, () => ({
+        ...default_headers,
+        ...headers
+      }));
     } else if (IsBody(api)) {
-      result[key] = GenerateBodyType(api, metadata, () => headers);
+      result[key] = GenerateBodyType(api, metadata, () => ({
+        ...default_headers,
+        ...headers
+      }));
     } else if (IsUrl(api)) {
-      result[key] = GenerateUrlType(api, metadata, () => headers);
+      result[key] = GenerateUrlType(api, metadata, () => ({
+        ...default_headers,
+        ...headers
+      }));
     } else if (IsApis(api)) {
-      result[key] = GenerateInterface(api, metadata);
+      result[key] = GenerateInterface(api, metadata, default_headers);
     }
   }
 
@@ -334,4 +348,11 @@ export function GenerateInterface<TSchema extends Apis>(
     }
   });
   return result as any;
+}
+
+export default function<TSchema extends Apis>(
+  schema: TSchema,
+  metadata: Metadata
+): ApiInterface<TSchema> & { headers: { [key: string]: string } } {
+  return GenerateInterface(schema, metadata, metadata.headers || {});
 }
