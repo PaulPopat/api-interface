@@ -1,6 +1,6 @@
 {
   "name": "@paulpopat/api-interface",
-  "version": "1.1.2",
+  "version": "1.1.7",
   "main": "lib/index.js",
   "description": "A tool for generating simple interfaces for calling APIs accross projects",
   "repository": {
@@ -14,9 +14,11 @@
   },
   "homepage": "https://github.com/PaulPopat/api-interface#readme",
   "scripts": {
-    "build": "npm run build:types && npm run build:js",
+    "build": "npm run test && npm run build:types && npm run build:js && npm run build:compress",
     "build:types": "tsc --emitDeclarationOnly",
-    "build:js": "babel src --out-dir lib --extensions \".ts,.tsx\" --source-maps inline"
+    "build:js": "babel src --out-dir lib --extensions \".ts,.tsx\" --source-maps inline",
+    "build:compress": "uglifyjs lib/index.js --compress --mangle --output lib/index.js",
+    "test": "jest"
   },
   "devDependencies": {
     "@babel/cli": "^7.2.3",
@@ -25,10 +27,15 @@
     "@babel/plugin-proposal-object-rest-spread": "^7.4.0",
     "@babel/preset-env": "^7.4.1",
     "@babel/preset-typescript": "^7.3.3",
-    "typescript": "^3.3.3"
+    "@types/jest": "^24.0.19",
+    "jest": "^24.9.0",
+    "ts-jest": "^24.1.0",
+    "typescript": "^3.3.3",
+    "uglify-js": "^3.6.3"
   },
   "dependencies": {
-    "axios": "^0.19.0",
-    "@paulpopat/safe-type": "^2.0.0"
+    "@babel/polyfill": "^7.6.0",
+    "@paulpopat/safe-type": "^2.0.0",
+    "axios": "^0.19.0"
   }
 }

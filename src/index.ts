@@ -1,9 +1,11 @@
-import axios from "axios";
+import "@babel/polyfill";
+import axios, { AxiosRequestConfig, AxiosInstance } from "axios";
 import { Checker, IsType } from "@paulpopat/safe-type";
 
 type Metadata = {
   base: string;
   headers?: { [key: string]: string };
+  middleware?: (v: AxiosRequestConfig) => Promise<AxiosRequestConfig>;
 };
 
 type BodyType<TBody, TReturns> = {
@@ -52,7 +54,8 @@ type UrlFunction<TReturns, TSchema extends UrlType<TReturns>> = (
 function GenerateUrlType<TReturns, TSchema extends UrlType<TReturns>>(
   schema: TSchema,
   metadata: Metadata,
-  headers: () => { [key: string]: string }
+  headers: () => { [key: string]: string },
+  api: AxiosInstance
 ) {
   return async (
     parameters: {
@@ -84,7 +87,7 @@ function GenerateUrlType<TReturns, TSchema extends UrlType<TReturns>>(
       throw new Error(`Parameter has not been filled in ${url}`);
     }
 
-    const { data: result } = await axios.request({
+    const { data: result } = await api.request({
       method: schema.method,
       url: url,
       baseURL: metadata.base,
@@ -118,7 +121,8 @@ function GenerateBodyType<
 >(
   schema: TSchema,
   metadata: Metadata,
-  headers: () => { [key: string]: string }
+  headers: () => { [key: string]: string },
+  api: AxiosInstance
 ) {
   return async (
     parameters: {
@@ -145,7 +149,7 @@ function GenerateBodyType<
       throw new Error(`Parameter has not been filled in ${url}`);
     }
 
-    const { data: result } = await axios.request({
+    const { data: result } = await api.request({
       method: schema.method,
       url: url,
       data: body,
@@ -170,10 +174,11 @@ type PlainUrlFunction<
 function GeneratePlainUrlType<TReturns, TSchema extends PlainUrlType<TReturns>>(
   schema: TSchema,
   metadata: Metadata,
-  headers: () => { [key: string]: string }
+  headers: () => { [key: string]: string },
+  api: AxiosInstance
 ) {
   return async () => {
-    const { data: result } = await axios.request({
+    const { data: result } = await api.request({
       method: schema.method,
       url: schema.url,
       baseURL: metadata.base,
@@ -202,10 +207,11 @@ function GeneratePlainBodyType<
 >(
   schema: TSchema,
   metadata: Metadata,
-  headers: () => { [key: string]: string }
+  headers: () => { [key: string]: string },
+  api: AxiosInstance
 ) {
   return async (body: IsType<TSchema["body"]>) => {
-    const { data: result } = await axios.request({
+    const { data: result } = await api.request({
       method: schema.method,
       url: schema.url,
       baseURL: metadata.base,
@@ -270,7 +276,11 @@ function IsPlainUrl<TBody = {}, TReturns = {}>(
     | PlainBodyType<TBody, TReturns>
     | Apis
 ): schema is PlainUrlType<TReturns> {
-  return !schema.hasOwnProperty("parameters") && !schema.hasOwnProperty("body");
+  return (
+    !schema.hasOwnProperty("parameters") &&
+    !schema.hasOwnProperty("body") &&
+    schema.hasOwnProperty("url")
+  );
 }
 
 function IsPlainBody<TBody = {}, TReturns = {}>(
@@ -303,7 +313,8 @@ function IsApis<TBody = {}, TReturns = {}>(
 function GenerateInterface<TSchema extends Apis>(
   schema: TSchema,
   metadata: Metadata,
-  default_headers: { [key: string]: string }
+  default_headers: { [key: string]: string },
+  instance: AxiosInstance
 ): ApiInterface<TSchema> & { headers: { [key: string]: string } } {
   const result: ApiInterface<any> = {};
   let headers: { [key: string]: string } = {};
@@ -315,27 +326,35 @@ function GenerateInterface<TSchema extends Apis>(
 
     const api = schema[key];
     if (IsPlainBody(api)) {
-      result[key] = GeneratePlainBodyType(api, metadata, () => ({
-        ...default_headers,
-        ...headers
-      }));
+      result[key] = GeneratePlainBodyType(
+        api,
+        metadata,
+        () => ({ ...default_headers, ...headers }),
+        instance
+      );
     } else if (IsPlainUrl(api)) {
-      result[key] = GeneratePlainUrlType(api, metadata, () => ({
-        ...default_headers,
-        ...headers
-      }));
+      result[key] = GeneratePlainUrlType(
+        api,
+        metadata,
+        () => ({ ...default_headers, ...headers }),
+        instance
+      );
     } else if (IsBody(api)) {
-      result[key] = GenerateBodyType(api, metadata, () => ({
-        ...default_headers,
-        ...headers
-      }));
+      result[key] = GenerateBodyType(
+        api,
+        metadata,
+        () => ({ ...default_headers, ...headers }),
+        instance
+      );
     } else if (IsUrl(api)) {
-      result[key] = GenerateUrlType(api, metadata, () => ({
-        ...default_headers,
-        ...headers
-      }));
+      result[key] = GenerateUrlType(
+        api,
+        metadata,
+        () => ({ ...default_headers, ...headers }),
+        instance
+      );
     } else if (IsApis(api)) {
-      result[key] = GenerateInterface(api, metadata, default_headers);
+      result[key] = GenerateInterface(api, metadata, default_headers, instance);
     }
   }
 
@@ -354,5 +373,10 @@ export default function<TSchema extends Apis>(
   schema: TSchema,
   metadata: Metadata
 ): ApiInterface<TSchema> & { headers: { [key: string]: string } } {
-  return GenerateInterface(schema, metadata, metadata.headers || {});
+  const instance = axios.create({ baseURL: metadata.base });
+  if (metadata.middleware) {
+    instance.interceptors.request.use(metadata.middleware);
+  }
+
+  return GenerateInterface(schema, metadata, metadata.headers || {}, instance);
 }
