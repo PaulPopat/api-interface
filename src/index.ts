@@ -1,6 +1,6 @@
 import "@babel/polyfill";
 import axios, { AxiosRequestConfig, AxiosInstance } from "axios";
-import { Checker, IsType } from "@paulpopat/safe-type";
+import { Checker, IsType, IsArray, IsString } from "@paulpopat/safe-type";
 
 type Metadata = {
   base: string;
@@ -10,7 +10,7 @@ type Metadata = {
 
 type BodyType<TBody, TReturns> = {
   url: string;
-  parameters: { [key: string]: Checker<string> };
+  parameters: { [key: string]: Checker<string | string[] | null | undefined> };
   returns: Checker<TReturns>;
   method: "PUT" | "POST" | "PATCH";
   body: Checker<TBody>;
@@ -18,7 +18,7 @@ type BodyType<TBody, TReturns> = {
 
 type UrlType<TReturns> = {
   url: string;
-  parameters: { [key: string]: Checker<string> };
+  parameters: { [key: string]: Checker<string | string[] | null | undefined> };
   returns: Checker<TReturns>;
   method: "GET" | "DELETE";
 };
@@ -68,19 +68,38 @@ function GenerateUrlType<TReturns, TSchema extends UrlType<TReturns>>(
         continue;
       }
 
-      const p = encodeURIComponent(parameters[key]);
-      const k = encodeURIComponent(key);
-      if (url.indexOf(":" + key) > -1) {
-        url = url.replace(":" + key, p);
-        continue;
-      }
+      const input = parameters[key];
+      if (IsString(input)) {
+        const p = encodeURIComponent(input);
+        const k = encodeURIComponent(key);
+        if (url.indexOf(":" + key) > -1) {
+          url = url.replace(":" + key, p);
+          continue;
+        }
 
-      if (url.indexOf("?") > -1) {
-        url += "&" + k + "=" + p;
-        continue;
-      }
+        if (url.indexOf("?") > -1) {
+          url += "&" + k + "=" + p;
+          continue;
+        }
 
-      url += "?" + k + "=" + p;
+        url += "?" + k + "=" + p;
+      } else if (IsArray(IsString)(input)) {
+        for (const i of input) {
+          const p = encodeURIComponent(i);
+          const k = encodeURIComponent(key);
+          if (url.indexOf(":" + key) > -1) {
+            url = url.replace(":" + key, p);
+            continue;
+          }
+
+          if (url.indexOf("?") > -1) {
+            url += "&" + k + "=" + p;
+            continue;
+          }
+
+          url += "?" + k + "=" + p;
+        }
+      }
     }
 
     if (url.indexOf(":") > -1) {
@@ -136,7 +155,14 @@ function GenerateBodyType<
         continue;
       }
 
-      const p = encodeURIComponent(parameters[key]);
+      const input = parameters[key];
+      if (!IsString(input)) {
+        throw new Error(
+          "Cannot have array parameters or null parameters of the url"
+        );
+      }
+
+      const p = encodeURIComponent(input);
       if (url.indexOf(":" + key) > -1) {
         url = url.replace(":" + key, p);
         continue;
