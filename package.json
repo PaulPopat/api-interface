@@ -1,6 +1,6 @@
 {
   "name": "@paulpopat/api-interface",
-  "version": "1.1.9",
+  "version": "1.1.10",
   "main": "lib/index.js",
   "description": "A tool for generating simple interfaces for calling APIs accross projects",
   "repository": {
@@ -35,7 +35,7 @@
   },
   "dependencies": {
     "@babel/polyfill": "^7.8.3",
-    "@paulpopat/safe-type": "^2.0.2",
+    "@paulpopat/safe-type": "^2.0.3",
     "axios": "^0.19.2"
   }
 }
