@@ -1,6 +1,6 @@
 {
   "name": "@paulpopat/api-interface",
-  "version": "1.1.10",
+  "version": "1.1.11",
   "main": "lib/index.js",
   "description": "A tool for generating simple interfaces for calling APIs accross projects",
   "repository": {
@@ -18,7 +18,8 @@
     "build:types": "tsc --emitDeclarationOnly",
     "build:js": "babel src --out-dir lib --extensions \".ts,.tsx\" --source-maps inline",
     "build:compress": "uglifyjs lib/index.js --compress --mangle --output lib/index.js",
-    "test": "jest"
+    "test": "jest",
+    "prepublish": "npm run build"
   },
   "devDependencies": {
     "@babel/cli": "^7.8.4",
