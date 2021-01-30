@@ -1,6 +1,6 @@
 {
   "name": "@paulpopat/api-interface",
-  "version": "1.1.11",
+  "version": "1.1.12",
   "main": "lib/index.js",
   "description": "A tool for generating simple interfaces for calling APIs accross projects",
   "repository": {
